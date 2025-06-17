@@ -1,33 +1,33 @@
 #!/bin/bash
+set -e
 
 DATE=$(date +%Y%m%d)
 BACKUP_DIR="/var/backups/git-repos/$DATE"
-REPOS=(repo1 repo2 repo3)
-
 mkdir -p "$BACKUP_DIR"
+
+REPOS=("repo1" "repo2" "repo3")
 
 for REPO in "${REPOS[@]}"; do
     echo "[$REPO] Pulling latest changes..."
+    cd "/tmp/$REPO"
 
-    if [ -d "/tmp/$REPO/.git" ]; then
-        cd "/tmp/$REPO" || exit
-        git config --global --add safe.directory "/tmp/$REPO"
-        git pull || echo "❌ Pull failed for $REPO"
-    else
-        git clone "https://github.com/Sahana1110/$REPO.git" "/tmp/$REPO"
-        cd "/tmp/$REPO" || exit
-    fi
+    # Make sure you're on a valid branch before pulling
+    BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
+    git checkout "$BRANCH" || git checkout main || git checkout master
+
+    git pull origin "$BRANCH" || echo "❌ Pull failed for $REPO"
 
     echo "[$REPO] Archiving..."
-    tar -czf "$BACKUP_DIR/$REPO-$DATE.tar.gz" "/tmp/$REPO"
-
-    echo "[$REPO] Backup: $REPO-$DATE.tar.gz" >> "$BACKUP_DIR/audit-$DATE.txt"
-    echo "[$REPO] Commit: $(git log -1 --pretty=format:'%h - %s (%ci)')" >> "$BACKUP_DIR/audit-$DATE.txt"
-    echo "------------------------------" >> "$BACKUP_DIR/audit-$DATE.txt"
+    tar -czf "$REPO-$DATE.tar.gz" "/tmp/$REPO"
+    cp "$REPO-$DATE.tar.gz" "$BACKUP_DIR/"
 done
 
-# Copy to Jenkins workspace for archiving
-cp "$BACKUP_DIR"/*.tar.gz "$WORKSPACE"/ || echo "❌ Copy tar failed"
-cp "$BACKUP_DIR"/audit-*.txt "$WORKSPACE"/ || echo "❌ Copy audit failed"
+# Save audit log
+echo "Backup completed on $(date)" > "audit-$DATE.txt"
+cp "audit-$DATE.txt" "$BACKUP_DIR/"
+
+# Copy to Jenkins workspace
+cp "$BACKUP_DIR/"*.tar.gz .
+cp "$BACKUP_DIR/"audit-"$DATE".txt .
 
 echo "✅ Backup complete. Files available in Jenkins workspace."
