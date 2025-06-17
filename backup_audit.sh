@@ -9,6 +9,7 @@ for repo in repo1 repo2 repo3; do
     if [ -d "$BACKUP_DIR/$repo" ]; then
         cd "$BACKUP_DIR/$repo" || { echo "❌ Failed to enter $repo"; exit 1; }
         git pull origin main || echo "❌ Pull failed for $repo"
+	git checkout origin main
 
         echo "[$repo] Archiving..."
         tar -czf "$DEST_DIR/${repo}_$(date +%F).tar.gz" -C "$BACKUP_DIR" "$repo"
