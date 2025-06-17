@@ -17,7 +17,7 @@ pipeline {
 
         stage('Archive Backups and Logs') {
             steps {
-                archiveArtifacts artifacts: '.tar.gz, audit-.txt', onlyIfSuccessful: true
+                archiveArtifacts artifacts: '*.tar.gz, audit-.txt', onlyIfSuccessful: true
             }
         }
     }
