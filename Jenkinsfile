@@ -24,7 +24,7 @@ pipeline {
 
     post {
         always {
-            echo '✅ Backup and audit complete. Check archived artifacts for logs and tar files.'
+            echo '✅ Backup and audit complete. Check archived artifacts.'
         }
     }
 }
