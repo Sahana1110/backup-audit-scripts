@@ -9,24 +9,20 @@ REPOS=("repo1" "repo2" "repo3")
 
 for REPO in "${REPOS[@]}"; do
     echo "[$REPO] Pulling latest changes..."
-    cd "/tmp/$REPO"
+    cd "/tmp/$REPO" || { echo "❌ Repo path /tmp/$REPO not found!"; continue; }
 
-    # Make sure you're on a valid branch before pulling
-    BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
+    BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
     git checkout "$BRANCH" || git checkout main || git checkout master
-
     git pull origin "$BRANCH" || echo "❌ Pull failed for $REPO"
 
     echo "[$REPO] Archiving..."
-    tar -czf "$REPO-$DATE.tar.gz" "/tmp/$REPO"
+    tar --warning=no-file-changed -czf "$REPO-$DATE.tar.gz" -C "/tmp" "$REPO"
     cp "$REPO-$DATE.tar.gz" "$BACKUP_DIR/"
 done
 
-# Save audit log
+# Create and copy audit log
 echo "Backup completed on $(date)" > "audit-$DATE.txt"
 cp "audit-$DATE.txt" "$BACKUP_DIR/"
-
-# Copy to Jenkins workspace
 cp "$BACKUP_DIR/"*.tar.gz .
 cp "$BACKUP_DIR/"audit-"$DATE".txt .
 
