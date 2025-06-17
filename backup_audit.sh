@@ -1,31 +1,43 @@
 #!/bin/bash
 
-TODAY=$(date +%Y%m%d)
-BACKUP_DIR="/var/backups/git-repos/$TODAY"
-LOG_FILE="$BACKUP_DIR/audit-$TODAY.txt"
-REPO_LIST="repos.txt"
+# Date format
+DATE=$(date +%Y%m%d)
 
+# Directories
+BACKUP_DIR="/var/backups/git-repos/$DATE"
+REPOS=(repo1 repo2 repo3)
+
+# Make backup directory
 mkdir -p "$BACKUP_DIR"
 
-while read -r REPO_URL; do
-    REPO_NAME=$(basename "$REPO_URL" .git)
-    LOCAL_DIR="/tmp/$REPO_NAME"
-
-    if [ -d "$LOCAL_DIR/.git" ]; then
-        echo "[$REPO_NAME] Pulling latest changes..."
-        cd "$LOCAL_DIR" && git pull
+# Loop through repos
+for REPO in "${REPOS[@]}"; do
+    echo "[$REPO] Pulling latest changes..."
+    
+    # Clone or update repo
+    if [ -d "/tmp/$REPO/.git" ]; then
+        cd "/tmp/$REPO" || exit
+        git pull
     else
-        echo "[$REPO_NAME] Cloning fresh..."
-        git clone "$REPO_URL" "$LOCAL_DIR"
+        git clone "https://github.com/Sahana1110/$REPO.git" "/tmp/$REPO"
+        cd "/tmp/$REPO" || exit
     fi
 
-    echo "[$REPO_NAME] Archiving..."
-    tar -czf "$BACKUP_DIR/${REPO_NAME}-$TODAY.tar.gz" -C "$LOCAL_DIR" .
+    # Fix dubious ownership (safe.directory)
+    git config --global --add safe.directory "/tmp/$REPO"
 
-    echo "=== Commits for $REPO_NAME (last 1 day) ===" >> "$LOG_FILE"
-    cd "$LOCAL_DIR"
-    git log --since=1.day >> "$LOG_FILE"
-    echo "------------------------------------------" >> "$LOG_FILE"
-done < "$REPO_LIST"
+    # Archive the repo
+    echo "[$REPO] Archiving..."
+    tar -czf "$BACKUP_DIR/$REPO-$DATE.tar.gz" "/tmp/$REPO"
+
+    # Add audit log
+    echo "[$REPO] Backup: $REPO-$DATE.tar.gz" >> "$BACKUP_DIR/audit-$DATE.txt"
+    echo "[$REPO] Commit: $(git log -1 --pretty=format:'%h - %s (%ci)')" >> "$BACKUP_DIR/audit-$DATE.txt"
+    echo "------------------------------" >> "$BACKUP_DIR/audit-$DATE.txt"
+done
+
+# Copy artifacts back to Jenkins workspace
+cp "$BACKUP_DIR"/*.tar.gz .
+cp "$BACKUP_DIR"/audit-*.txt .
 
 echo "✅ Backup complete. Stored in $BACKUP_DIR"

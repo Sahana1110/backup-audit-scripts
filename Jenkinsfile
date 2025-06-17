@@ -1,12 +1,13 @@
 pipeline {
     agent any
 
-    environment {
-        BACKUP_DIR = "/var/backups/git-repos"
-        REPO_LIST = "repos.txt"
-    }
-
     stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
         stage('Run Backup Script') {
             steps {
                 sh 'chmod +x backup_audit.sh'
@@ -16,7 +17,7 @@ pipeline {
 
         stage('Archive Backups and Logs') {
             steps {
-                archiveArtifacts artifacts: '*/.tar.gz, */audit-.txt', allowEmptyArchive: true
+                archiveArtifacts artifacts: '.tar.gz, audit-.txt', allowEmptyArchive: false
             }
         }
     }
